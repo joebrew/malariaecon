@@ -1,0 +1,1 @@
+"Income and Democracy Data AER adjustment.xls" download from https://economics.mit.edu/faculty/acemoglu/data/ajry2008 on 2018-06-07.
