@@ -6,7 +6,7 @@
 % {pnasmathematics} %= Template for a one-column mathematics article
 % {pnasinvited} %= Template for a PNAS invited submission
 
-\title{Does reducing malaria's burden cause economic growth, or does growth reduce malaria?}
+\title{Does reducing Malaria's burden cause economic growth, or does growth reduce Malaria?}
 
 % Use letters for affiliations, numbers to show equal authorship (if applicable) and to indicate the corresponding author
 \author[a,b,1]{Joe Brew}
@@ -21,7 +21,7 @@
 \leadauthor{Brew} 
 
 % Please add here a significance statement to explain the relevance of your work
-\significancestatement{Though it is clear that malaria is a "disease of poverty", the extent to which malaria is the cause or effect of poverty is not fully understood. Identifying the direction of the causal relationship between health and wealth is vital to knowing where resources should be directed, ie whether interventions in poor, malaria-endemic societies should target the disease or the poverty. We analyzed the relationship between GDP growth and the prevalence of Plasmodium falciparum among children in 27 malaria-endemic African countries, and identified health to wealth as the primary causal pathway. Our findings suggest that scaling up investment in reducing malaria's burden could be a pre-requisite condition for enabling economic growth in Sub-Saharan Africa.}
+\significancestatement{Malaria is a "disease of poverty" but the extent to which Malaria is the cause or effect of poverty is not fully understood. Identifying the direction of the causal relationship between health and wealth is vital to knowing whether development interventions in poor, Malaria-endemic societies should target the disease or the poverty. We analyzed the relationship between GDP and the prevalence of Plasmodium falciparum among children in 27 Malaria-endemic African countries, and identified health to wealth as the primary causal pathway. Our findings suggest that in countries with a high burden of Malaria, targeting the disease directly through public health interventions may lead to economic growth.}
 
 % Please include corresponding author, author contribution and author declaration information
 \authorcontributions{Author contributions: J.B., L.C., and E.S. designed research; J.B. gathered and processed data; J.B., L.C., and E.S. analyzed
@@ -33,7 +33,7 @@ data; J.B., L.C., and E.S. wrote the paper}
 \keywords{Malaria $|$ Economics $|$ Development $|$ Growth $|$ Causality} 
 
 \begin{abstract}
-The correlation between poverty and malaria endemicity has been well established, but causal directionality has not. Understanding the extent to which malaria causes economic stagnation, and vice-versa, is important for an efficient allotment of development resources. Using 15 years of panel data from 27 malaria-endemic Sub-Saharan African countries, we carry out a Granger-causality analysis of the potential directional relationship between economic growth and a reduction in malaria’s prevalence. Having identified a temporally coherent health-to-wealth pathway, we then carry out a sensitivity analysis to test causality. Our results are robust, suggesting that development-oriented aid and investment in malaria-endemic countries should prioritize those interventions which reduce malaria directly.
+The correlation between poverty and Malaria endemicity has been well established, but causal directionality has not. Understanding the extent to which Malaria causes economic stagnation, and vice-versa, is important for an efficient allotment of development resources. Using 15 years of panel data from 27 Malaria-endemic Sub-Saharan African countries, we carry out a Granger-causality analysis of the potential directional relationship between economic growth and a reduction in Malaria’s prevalence. Having identified a temporally coherent health-to-wealth pathway, we then carry out a sensitivity analysis to test causality. Our results are robust, suggesting that development-oriented aid and investment in Malaria-endemic countries should prioritize those interventions which reduce Malaria directly.
 \end{abstract}
 
 \dates{This manuscript was compiled on \today}
@@ -46,98 +46,82 @@ The correlation between poverty and malaria endemicity has been well established
 \ifthenelse{\boolean{shortarticle}}{\ifthenelse{\boolean{singlecolumn}}{\abscontentformatted}{\abscontent}}{}
 
 
-\dropcap{M}alaria causes more than a half million deaths worldwide every year \cite{White}. In addition to its devastating health effects, Malaria has a large economic impact.  By reducing one’s ability to work efficiently \cite{Nonvignon2016-vt}, if at all, malaria imposes a large financial cost on the infected \cite{Asenso-Okyere1997-wj} \cite{Ajani2010-dd}, and the toll trickles upwards to society at large \cite{Sachs2002-ig}. Not only does malaria likely has a negative effect on GDP and growth \cite{McCarthy2000-wl, Orem2012-kr, Hong2011-sa, Sachs2002-ig}, in a classic feedback loop, low growth can keep societies in a resource-scarce state making interventions which target the control or elimination of malaria difficult \cite{White, Purdy2013-rt, Howard2017-pk, Phillips1998-ky}. 
+\dropcap{M}alaria causes more than a half million deaths worldwide every year \cite{White}. In addition to its devastating health effects, Malaria has a large economic impact.  By reducing one’s ability to work efficiently \cite{Nonvignon2016-vt}, if at all, Malaria imposes a large financial cost on the infected \cite{Asenso-Okyere1997-wj} \cite{Ajani2010-dd}, and the toll trickles upwards to society at large \cite{Sachs2002-ig}. Not only does Malaria likely has a negative effect on GDP and growth \cite{McCarthy2000-wl, Orem2012-kr, Hong2011-sa, Sachs2002-ig}, in a classic feedback loop, low growth can keep societies in a resource-scarce state making interventions which target the control or elimination of Malaria difficult \cite{White, Purdy2013-rt, Howard2017-pk, Phillips1998-ky}. 
 
-The correlation between poverty and malaria endemicity has been well established, but causal directionality has not. This lack of clarity may partially explain why there are two schools of thought in development circles regarding where resources should be directed. One school argues that a society must be brought out of poverty, after which gains in health are almost inevitable, but prior to which significant health improvements are nearly impossible \cite{Musgrove1996-hm}.  The other argues for a more “holistic” development approach, implicitly calling for resources to be devoted to areas believed to be pre-requiste to wealth acquisition, such as health \cite{Storm2008-dd, Sen_undated-gp}.  Clarke et al. covers this distinction more thoroughly \cite{Clarke_JA2016-ik}.
+The correlation between poverty and Malaria endemicity has been well established, but causal directionality has not. This lack of clarity may partially explain why there are two schools of thought in development circles regarding where resources should be directed. One school argues that a society must be brought out of poverty, after which gains in health are almost inevitable, but prior to which significant health improvements are nearly impossible \cite{Musgrove1996-hm}.  The other argues for a more “holistic” development approach, implicitly calling for resources to be devoted to areas believed to be pre-requiste to wealth acquisition, such as health \cite{Storm2008-dd, Sen_undated-gp}.  Clarke et al. covers this distinction more thoroughly \cite{Clarke_JA2016-ik}.
 
-Though both schools acknowledge that the interaction between health and wealth is bi-directional, understanding the extent to which malaria’s burden affects the economy, and vice-versa, could shed light on areas where developmentalists should focus in order to break the vicious cycle. Particularly, knowing which kinds of improvements precede the other helps to guide policies which aim to improve well-being in the long-term. Since malaria’s economic effects are at the macro-scale, a randomized controlled trial to assess the extent to which a controlled shock to the burden of malaria or the economy is not feasible. Ample experiments and interventions exist at the sub-national level, and occasionally the national level, but these are generally carried out in isolation, lacking the plausible counterfactual with which to compare any observed improvement in malaria’s burden or economic growth. Additionally, at the sub-national and national levels, the amount of confounding factors (political changes, climate crises, etc.) are too great to isolate causal effects. 
+Though both schools acknowledge that the interaction between health and wealth is bi-directional, understanding the extent to which Malaria’s burden affects the economy, and vice-versa, could shed light on areas where developmentalists should focus in order to break the vicious cycle. Particularly, knowing which kinds of improvements precede the other helps to guide policies which aim to improve well-being in the long-term. Since Malaria’s economic effects are at the macro-scale, a randomized controlled trial to assess the extent to which a controlled shock to the burden of Malaria or the economy is not feasible. Ample experiments and interventions exist at the sub-national level, and occasionally the national level, but these are generally carried out in isolation, lacking the plausible counterfactual with which to compare any observed improvement in Malaria’s burden or economic growth. Additionally, at the sub-national and national levels, the amount of confounding factors (political changes, climate crises, etc.) are too great to isolate causal effects. 
 
-Given the impossibility of parsing these many complex factors at the micro-level, one approach for understanding causal directionality in the malaria-economy relationship is to zoom out to the macro-level and focus on simple temporality (ie, whether changes to the economy tend to preceed changes to malaria’s burden or vice-versa). By including many countries rather than just one, we cancel out each one’s idiosyncracies, and by carrying out statistical precedence analysis, we can identify a potentially causal trend for further analysis. 
+Given the impossibility of parsing these many complex factors at the micro-level, one approach for understanding causal directionality in the Malaria-economy relationship is to zoom out to the macro-level and focus on simple temporality (ie, whether changes to the economy tend to preceed changes to Malaria’s burden or vice-versa). By including many countries rather than just one, we cancel out each one’s idiosyncracies, and by carrying out statistical precedence analysis, we can identify a potentially causal trend for further analysis. 
 
-Granger-causation analysis, a form of temporal precedence analysis, is a useful tool for doing this \cite{Granger_undated-wn, Molenaar2018-ss, Koller2016-rv, Granger1896-di, Clarke_JA2016-ik}. In the field of Economics, it is commonly used with panel data to assess the directionality of a bi-directional relationship \cite{Law_2013, Joerding1986}. For ths specific link to health and growth, it has been used to examine the causal links between the health status and savings of elderly Europeans \cite{Andreyeva2007-zq}, general health and socieconomic status \cite{Adams2003-wl}, and macro-level development and mortality \cite{Clarke_JA2016-ik}. These studies found causal directionality to be ambiguous. No study, to the authors’ knowledge, has used Granger causality to examine the relationship between malaria’s burden and GDP. Sachs' seminal study on malaria's effect on the economy \cite{Sachs2002-ig} focuses largely on societies where elimination of the disease was achieved, and on time-invariant factors such as latitude, distance to coast, colonial history.
+Granger-causation analysis, a form of temporal precedence analysis, is a useful tool for doing this \cite{Granger_undated-wn, Molenaar2018-ss, Koller2016-rv, Granger1896-di, Clarke_JA2016-ik}. In the field of Economics, it is commonly used with panel data to assess the directionality of a bi-directional \cite{Law_2013, Joerding1986, ADALI_2017} or multi-directional \cite{Akbas_2013} relationship. For ths specific link to health and growth, it has been used to examine the causal links between the health status and savings of elderly Europeans \cite{Andreyeva2007-zq}, general health and socieconomic status \cite{Adams2003-wl}, and macro-level development and mortality \cite{Clarke_JA2016-ik}. These studies found causal directionality to be ambiguous. No study, to the authors’ knowledge, has used Granger causality to examine the relationship between Malaria’s burden and GDP. Sachs' seminal study on Malaria's effect on the economy \cite{Sachs2002-ig} focuses largely on societies where elimination of the disease was achieved, and on time-invariant factors such as latitude, distance to coast, colonial history.
 
-Using 15 years of data from 27 malaria-endemic Sub-Saharan African countries, we carry out an analysis of the potential causal relationship between economic growth and a reduction in the prevalence of malaria. Having identified a temporally coherent health-to-wealth pathway, we then carry out a sensitivity analysis to provide further evidence for predemoninantly health-driven growth.
+Using 15 years of data from 27 Malaria-endemic Sub-Saharan African countries, we carry out an analysis of the potential causal relationship between economic growth and a reduction in the prevalence of Malaria. Having identified a temporally coherent health-to-wealth pathway, we then carry out a sensitivity analysis to provide further evidence for predemoninantly health-driven growth. This sensitivity analysis consists of a two-step procedure similar to the one employed by Bruckner \cite{bruckner2011}, in which we first estimate the response of Malaria to GDP growth (using xxx as an instrumental variable) and then use the residuals from that first step's estimation as an instrument for the second model, in which GDP growth is estimated as a function of the prevalence of Malaria. 
 
 \section*{Results}
-
-\subsection*{Association of GDP and malaria prevalence}
-
-Figure \ref{fig:descriptive} shows figure stuff.
-
 
 \begin{figure*}%[tbhp] Remove the asterisk to get column width only
 \centering
 \includegraphics[width=.9\linewidth]{../figures/descriptive}
-\caption{A. Country-specific GDP and malaria prevalence values during observation period (all-country average in red). B. Association of growth (GDP divided by previous year's GDP) and reduction in malaria prevalence (1 minus prevalence divided by previous year's prevalence).}
+\caption{A. Country-specific GDP and Malaria prevalence values during observation period (all-country average in black). An overall increasing trend is plainly visible, albeit with a dib in growth following the 2007-8 financial crisis. B. Association of growth (GDP divided by previous year's GDP) and reduction in Malaria prevalence (1 minus prevalence divided by previous year's prevalence). Most observations fall in the upper-right quadrant (ie, increasing GDP and decreasing Malaria prevalence). C. Country-specific GDP-Malaria trajectory, 2000-2015. Each line shows an individual country's 15 year trajectory; the black line is the overall trend. At most times, countries moved rightward (increasing GDP per Capita) and downward (decreasing prevalence of Malaria). D. Countries included in study.}
 \label{fig:descriptive}
 \end{figure*}
 
 
-% And here is some other figure \ref{fig:paths}
+\subsection*{Association of GDP and Malaria prevalence}
 
-% \begin{figure}%[tbhp] Remove the asterisk to get column width only
-% \centering
-% \includegraphics[width=.95\linewidth]{../figures/paths}
-% \caption{GDP-Malaria trajectory, 2000-2015.}
-% \label{fig:paths}
-% \end{figure}
+We examined the entirety of Sub-Saharan Africa, filtering out countries which had a less than 10\% prevalence of Malaria in 2001 or a GDP per Capita of greater than 10,000 USD at any point in the study period (2001-2015) (Fig. \ref{fig:descriptive}, D). Over the course of the 15 year study period, of the 27 Sub-Saharan African countries which met our inclusion criteria, all but 1 (The Gambia) saw an overall increase in GDP per Capita, and only 1 (Mali) had an overall increase in the prevalence of Malaria. The trajectories of GDP growth and Malaria reduction were hardly uniform, however: of the 405 country-years observed, 104 (26\%) country-years were associated with a reduction in GDP per Capita from the previous year, and 107 (28\%) saw an increase in the prevalence of Malaria relative to the previous year  (Fig. \ref{fig:descriptive}, B). Nonetheless, the overall trend is clear across the continent: over time, as the economy increased, the prevalence of Malaria decreased (Fig. \ref{fig:descriptive}, A and C). For every 1\% decrease in the prevalence of Malaria, GDP per Capita increased on average by 6.2 USD (p<0.01, R-squared=0.03).
+
+However, the association between Malaria prevalence and GDP per Capita appears to be largley mediated by time, and is not evident at any cross-sectional point. We calculated year-specific Pearson's product moment correlation coefficients for the association between GDP per Capita and Malaria prevalence for the entire study period, and found that it did not reach the level of significance at any point (Fig. \ref{fig:cor}). Additionally, country-years in which malaria was reduced relative to the previous year were not significantly associated with greater GDP per Capita growth as compared to country-years in which malaria increased (average of 8.3\% relative to 6.6\%, p=0.25). By the same token, an increase in GDP was not significantly associated with a corresponding reduction in the prevalence of Malaria relative to years in which the economy shrunk (averages of 5.3\% and 4.7\%, respectively, p=0.61). At any given point in time, the marginal differences between countries in GDP per Capita do not appear to be associated with significant differences in Malaria prevalence, and vice-versa.
+
+\begin{figure}%[tbhp] Remove the asterisk to get column width only
+\centering
+\includegraphics[width=.95\linewidth]{../figures/cor}
+\caption{Pearson's product moment correlation coefficient with 95\% confidence intervals for year-specific association between GDP per Capita and Malaria prevalence.}
+\label{fig:cor}
+\end{figure}
 
 
+\subsection*{Dumitrescu and Hurlin's panel Granger causality tests}
 
-\subsection*{Granger causality}
+We sought to test the significance of the relationship between the prevalence of Malaria and GDP per Capita using a Granger Hypothesis test. According to Granger's theory of causality, if X causes Y, then past values of X should be predictive of future values of Y. Rather than a traditional Granger causality test, we used the approach outlined by Dumitrescu and Hurlin \cite{dumitrescu}, so as to exploit the panel nature of our data. We suspected that the relationship would be bi-directional (ie, that reductions in Malaria lead to economic growth and vice-versa), and anticipated that any differences in the effect size and significance level of the Granger causal association would be suggestive (but not demonstrative) of respectively greater directional causality.
+
+We ran two tests: (A) with the null hypothesis that "Malaria decrease dot not cause GDP increase" and (B) with the null hypothesis that "GDP increase does not cause Malaria". The country-specific and aggregate test results are in table 1. The low P-value of test A suggests causality (or at least precedence), whereas the non-significant P-value of test B suggests that there is no case for temporal precedence. In other words, the Granger tests indicate that the Malaria-GDP pathway may be more important than the GDP-Malaria pathway.
+
+The average Chi-squared values for the tests were 1.72 and 1.26, respectively. These values are comparable, given that they are run on paired vectors. Since the data consists of a balanced panel, we can also consider the Z-bar statistic, a reflection of the magnitude of the predictiveness, with scores of 2.63 and 0.94 for tests A and B, respectively.
+
+
+\subsection*{Robustness check using Bruckner's 2-step approach}
+
+Our Granger tests are suggestive of a health to wealth causal pathway, but not the opposite. We take these findings to be indicative of the greater magnitude of the health to wealth pathway relative to the wealth to health pathway. However, we do not rule out the latter, since (i) our inability to reject the null hypothesis may be somewhat a function of small sample size and (ii) other studies have found a plausible wealth to health pathway in a number of settings.
+
+Accordingly, we employ a two-step least squares approach, as per Bruckner \cite{bruckner2011}, to adjust for the potential effect of GDP growth on the prevalence of Malaria. We use average annual precipitation, which should have a significant effect on malaria but not on GDP growth, as an instrumental variable. Having estimated the effect of lagged log changes in the of GDP on Malaria, we can then use the residual variation in Malaria prevalence which is not explained by GDP to estimate the effect of Malaria on GDP growth.
+
+\input{../tables/table2.tex}
+
 
 
 \subsection*{Sensitivity analysis}
 
+
+Granger tests do not provide evidence for causality, per se, but rather for temporal precedence, and should not be used for causal inference in less in the complete absence of other potential causes (which is certainly not our case). Accordingly, to make inference regarding causality, we take into consideration the findings from the Granger tests (ie, the health to wealth pathway) and test that theoretical pathway through three approaches... (Need to fill in)
+
+We also test the misspecification of the Granger lag length.
+
+
+
+
 \section*{Discussion}
 
-Bidirectional. Our finding that health affects wealth more than vice-versa is consistent with NOTME: Asafu-Adjaye’s (2004) study of 44 developing and developed countries and to the overall results of Erdil and Yetkiner (2009) and . It’s also consistent with Clarke’s finding that health’s causal importance was greater among low-income countries (Clarke JA 2016).
+Not done. Bidirectional. Our finding that health affects wealth more than vice-versa is consistent with NOTME: Asafu-Adjaye’s (2004) study of 44 developing and developed countries and to the overall results of Erdil and Yetkiner (2009) and . It’s also consistent with Clarke’s finding that health’s causal importance was greater among low-income countries (Clarke JA 2016).
+
+What could explain the lack of cross-sectional significance and predictability based on 1 year lags? The countries in our observation pool are relatively uniform in that nearly all carried out malaria control programs and experienced overall economic growth. Additionally, the relatively short nature of our study period (15 years) may prohibit the long-term "snowballing" accumulation of health and wealth benefits. That said, this study aims to assess the short-term directionality of the health-wealth association. 
+
+\input{../tables/table1.tex}
 
 
+Here is a lot more text.  
 
-
-
-\subsection*{Digital Figures}
-
-
-Figures and Tables should be labelled and referenced in the standard way using the \verb|\label{}| and \verb|\ref{}| commands.
-
-Figure \ref{fig:frog} shows an example of how to insert a column-wide figure. To insert a figure wider than one column, please use the \verb|\begin{figure*}...\end{figure*}| environment. Figures wider than one column should be sized to 11.4 cm or 17.8 cm wide. Use \verb|\begin{SCfigure*}...\end{SCfigure*}| for a wide figure with side captions.
-
-\subsection*{Tables}
-In addition to including your tables within this manuscript file, PNAS requires that each table be uploaded to the submission separately as a “Table” file.  Please ensure that each table .tex file contains a preamble, the \verb|\begin{document}| command, and the \verb|\end{document}| command. This is necessary so that the submission system can convert each file to PDF.
-
-\subsection*{Single column equations}
-
-Authors may use 1- or 2-column equations in their article, according to their preference.
-
-To allow an equation to span both columns, use the \verb|\begin{figure*}...\end{figure*}| environment mentioned above for figures.
-
-Note that the use of the \verb|widetext| environment for equations is not recommended, and should not be used. 
-
-\begin{figure*}[bt!]
-\begin{align*}
-(x+y)^3&=(x+y)(x+y)^2\\
-       &=(x+y)(x^2+2xy+y^2) \numberthis \label{eqn:example} \\
-       &=x^3+3x^2y+3xy^3+x^3. 
-\end{align*}
-\end{figure*}
-
-
-\begin{table}%[tbhp]
-\centering
-\caption{Comparison of the fitted potential energy surfaces and ab initio benchmark electronic energy calculations}
-\begin{tabular}{lrrr}
-Species & CBS & CV & G3 \\
-\midrule
-1. Acetaldehyde & 0.0 & 0.0 & 0.0 \\
-2. Vinyl alcohol & 9.1 & 9.6 & 13.5 \\
-3. Hydroxyethylidene & 50.8 & 51.2 & 54.0\\
-\bottomrule
-\end{tabular}
-
-\addtabletext{nomenclature for the TSs refers to the numbered species in the table.}
-\end{table}
 
 \matmethods{Data on the estimated Plasmodium falciparum parasite rate in 2-10 year olds from the period from 2000 through 2015 was obtained from the Malaria Atlas Project \cite{Hay_2006, Guerra_2007}. Annual Gross Domestic Product (GDP) per capita data was obtained from the World Bank \cite{worldbank}. We used the raster package \cite{raster} to aggregate point-specific Pf rates into annual country-wide averages (henceforth referred to as "Malaria prevalence"). All data processing and analysis was carried out in R \cite{rr}, and all data and code are freely available online \cite{brew}. Following the construction of our panel dataset, we used the PML package for the estimation of our Granger causality models \cite{Croissant_2008}.}
 

@@ -16,7 +16,7 @@ if('prepared_data.RData' %in% dir()){
 } else {
   # Read in shapefile of africa
   africa1 <- africa <- readOGR('data/africa_level_1', 'africa1')
-  africa_fortified <- broom::tidy(africa1, id = 'OBJECTID')
+  africa_fortified <- broom::tidy(africa1, id = 'NAME_0')
   
   # Read in malaria atlas project data
   mosq00 <- raster('data/malaria_atlas_project/2015_Nature_Africa_PR.2000.tif')
@@ -196,19 +196,65 @@ panel <- panel %>%
          malaria_reduction_relative = 1 - 
            (malaria_prevalence / 
            dplyr::lag(malaria_prevalence, n = 1)),
+         malaria_reduction_relative_lag = 1 - 
+           (dplyr::lag(malaria_prevalence, 1) / 
+              dplyr::lag(malaria_prevalence, n = 2)),
          gdp_growth = 
            gdp - 
            dplyr::lag(gdp, n = 1),
          gdp_growth_relative = 
            (gdp / 
-           dplyr::lag(gdp, n = 1) - 1)) %>%
+           dplyr::lag(gdp, n = 1) - 1),
+         gdp_growth_relative_lag = 
+           (dplyr::lag(gdp, n = 1) / 
+              dplyr::lag(gdp, n = 2) - 1)) %>%
   ungroup
+
+# Get weather data
+africa <- cism::africa
+africa@data$iso3 <- countrycode(africa@data$COUNTRY, origin = 'country.name',destination = 'iso3c')
+library(gsod)
+if('weather.RData' %in% dir()){
+  load('weather.RData')
+} else {
+  weather_list <- list()
+  years <- 2001:2015
+  for (i in 1:length(years)){
+    message(i)
+    xsp <- x <- get(paste0('gsod', years[i])) %>%
+      dplyr::filter(!is.na(lon), !is.na(lat)) 
+    coordinates(xsp) <- ~lon+lat
+    proj4string(xsp) <- proj4string(africa)
+    polys <- over(xsp, polygons(africa))
+    the_iso3 <- africa@data$iso3[polys]
+    x$iso3 <- the_iso3
+    x <- x %>% filter(!is.na(iso3))
+    out <- x %>%
+      dplyr::group_by(iso3) %>%
+      dplyr::summarise(temp = mean(temp, na.rm = TRUE),
+                prcp = mean(prcp, na.rm = TRUE),
+                max = max(max, na.rm = TRUE),
+                min = min(min, na.rm = TRUE),
+                stations = length(unique(stnid))) %>%
+      ungroup %>%
+      # mutate(prcp = prcp / stations) %>%
+      dplyr::mutate(year = years[i])
+    weather_list[[i]] <- out
+  }
+  weather <- bind_rows(weather_list)
+  save(weather, file = 'weather.RData')
+}
+
 
 # Keep only those countries in Africa
 africa_panel <- panel %>%
   group_by(country) %>%
   filter(!all(is.na(malaria_prevalence))) %>%
   ungroup
+
+# Join weather
+africa_panel <- africa_panel %>% 
+  left_join(weather)
 
 model_data <- africa_panel %>%
   dplyr::filter(malaria_prevalence_2001_high) %>%
@@ -242,6 +288,80 @@ model_data <- model_data %>%
 model_data <- model_data %>%
   arrange(country,year)
 
+# Distribution of gdp in post growth year
+model_data <- model_data %>%
+  arrange(year) %>%
+  group_by(country) %>%
+  mutate(post_gdp_growth = dplyr::lag(gdp_growth_relative, 1) > 0,
+         post_malaria_reduction = dplyr::lag(malaria_reduction_relative, 1) > 0,
+         post_gdp_growth_2 = dplyr::lag(gdp_growth_relative, 2) > 0,
+         post_malaria_reduction_2 = dplyr::lag(malaria_reduction_relative, 2) > 0) %>%
+  mutate(post_gdp_growth_consec = post_gdp_growth & post_gdp_growth_2,
+         post_malaria_reduction_consec = post_malaria_reduction & post_malaria_reduction_2) %>%
+  ungroup
+
+# Get log change
+model_data <- model_data %>%
+  mutate(log_change_gdp = log(gdp) - log(gdp_lag1),
+         log_change_malaria = log(malaria_prevalence) - log(malaria_prevalence_lag1)) %>%
+  group_by(country) %>%
+  mutate(log_change_gdp_lag = log(lag(gdp, 1)) - log(lag(gdp,2)),
+         log_change_malaria_lag = log(lag(malaria_prevalence, 1)) - log(lag(malaria_prevalence, 2))) %>%
+  ungroup
+
+# Causality using VAR 
+# like Blanchard and Perotti (2002) and Bruckner (2011)
+bruckner_data <- model_data %>% filter(!is.na(model_data$log_change_malaria),
+                                       !is.na(model_data$log_change_gdp_lag),
+                                       !is.na(prcp),
+                                       !is.na(model_data$log_change_gdp),
+                                       !is.na(model_data$log_change_malaria_lag))
+bruckner1 <- lm(malaria_reduction_relative ~ gdp_growth_relative_lag + prcp, data = bruckner_data)
+summary(bruckner1)
+bruckner2 <- lm(gdp_growth_relative ~ malaria_reduction_relative_lag + residuals(bruckner1), data = bruckner_data) 
+summary(bruckner2)
+
+# Make some table of results here
+library(knitr)
+library(kableExtra)
+table2 <- kable(broom::tidy(summary(bruckner2)),
+                'latex',
+                linesep = "",
+                # longtable = T,
+                booktabs = T,
+                caption = 'Placeholder table for Bruckner results') %>%
+  kable_styling() %>%
+  add_footnote(label = 'Some comments on the table.', notation = 'symbol')
+cat(table2, file = 'tables/table2.tex')
+
+
+library(MASS)
+x <- vars::VAR(y = model_data %>%
+                 dplyr::filter(!is.na(log_change_gdp),
+                               !is.na(log_change_malaria)) %>%
+                 dplyr::select(log_change_gdp,
+                               log_change_malaria),
+               p = 1,
+               type = 'both')
+out <- vars::causality(x = x,
+                       cause = 'log_change_malaria')
+# cause = 'malaria_prevalence')
+out
+
+library(MASS)
+x <- vars::VAR(y = model_data %>%
+                 dplyr::filter(!is.na(gdp),
+                               !is.na(malaria_prevalence)) %>%
+                 dplyr::select(gdp,
+                               malaria_prevalence),
+               p = 1,
+               type = 'both')
+out <- vars::causality(x = x,
+                       cause = 'gdp')
+# cause = 'malaria_prevalence')
+out
+
+
 library(cowplot)
 
 # # Lead and lag for malaria / gdp
@@ -269,66 +389,361 @@ g1 <- ggplot() +
                                   'Malaria prevalence')),
             aes(x = year,
                 y = value,
-                group = country),
+                group = country,
+                color = country),
             alpha = 0.6) +
   # scale_y_log10() +
   facet_wrap(~key, scales = 'free_y') +
   labs(x = 'Year',
-       y = 'Value',
+       y = '',
        title = 'A') +
   geom_line(data = x %>% dplyr::mutate(key = ifelse(key == 'gdp', 'GDP per Capita', 'Malaria prevalence')), 
             aes(x = year,
                 y = value),
-            color = 'red', 
+            color = 'black', 
             size = 2,
-            alpha = 0.7)
+            alpha = 0.7) +
+  scale_color_manual(name = '',
+                     values = colorRampPalette(brewer.pal(n = 9, 
+                                                          name = 'Spectral'))(length(unique(model_data$country)))) +
+  theme(legend.position = 'none') 
 
 
 
 # See gdp and malaria prevalence
+label_df <- data.frame(x = c(0.7, 0.7, -0.7, -0.7),
+                       y = c(0.7, -0.7, 0.7, -0.7),
+                       label = c('GDP increase\nMalaria decrease',
+                                 'GDP increase\nMalaria increase',
+                                 'GDP decrease\nMalaria decrease',
+                                 'GDP decrease\nMalaria increase'))
 g2 <- ggplot(data = model_data,
        aes(x = gdp_growth_relative,
            y = malaria_reduction_relative)) +
-  geom_point(size = 1, alpha = 0.6) +
+  geom_point(size = 1, alpha = 0.8,
+             aes(color = country)) +
   geom_hline(yintercept = 0) +
   geom_vline(xintercept = 0) +
   labs(x = 'GDP growth',
        y = 'Malaria prevalence reduction',
        title = 'B') +
   xlim(-1,1) +
-  ylim(-1,1)
+  ylim(-1,1) + scale_color_manual(name = '',
+                                values = colorRampPalette(brewer.pal(n = 9, 
+                                                                     name = 'Spectral'))(length(unique(model_data$country)))) +
+  theme(legend.position = 'none') +
+  geom_text(data = label_df,
+             aes(x = x,
+                 y = y,
+                 label = label),
+            alpha = 0.6)
+
 
 library(ggplot2)
 library(RColorBrewer)
 library(cowplot)
 library(dplyr)
 
+avg <- model_data %>%
+  group_by(year) %>%
+  summarise(gdp = mean(gdp),
+            malaria_prevalence = mean(malaria_prevalence)) %>%
+  ungroup
+avg <- avg %>%
+  dplyr::filter(year == dplyr::first(year) |
+                  year == dplyr::last(year))
+
 g3 <- 
-  ggplot(data = model_data,
+  ggplot(data = data.frame(model_data) %>%
+           group_by(country) %>%
+           mutate(x = dplyr::first(gdp),
+                  y = dplyr::first(malaria_prevalence),
+                  xend = dplyr::last(gdp),
+                  yend = dplyr::last(malaria_prevalence)) %>%
+             ungroup,
          aes(x = gdp,
-             y = malaria_prevalence,
-             color = country)) +
-  geom_point(alpha = 0.6,
-             size = 0.1) +
-  geom_path(alpha = 0.7,
-            aes(group = country),
-  arrow = arrow(type = "open", ends = 'first', angle = 30, length = unit(0.2, "cm"))) +
+             y = malaria_prevalence)) +
+  # geom_point(alpha = 0.6,
+  #            size = 0.1) +
+  geom_path(alpha = 0.9,
+            aes(group = country,
+                color = country),
+  arrow = arrow(type = "closed", ends = 'last', angle = 15, length = unit(0.2, "cm"))) +
   # ) +
   # scale_y_log10() +
   scale_x_log10() +
   # facet_wrap(~country, scales = 'free') +
   labs(x = 'GDP per Capita (log)',
-       y = 'Malaria prevalence') +
+       y = 'Malaria prevalence',
+       title = 'C') +
   # stat_smooth(n = 50, span = 1.5) +
-  theme(legend.position = 'none') +
-  scale_color_manual(name = 'Country',
+  # theme(legend.position = 'none') +
+  theme(legend.position = 'bottom',
+        legend.text = element_text(size = 8)) +
+  scale_color_manual(name = '',
                      values = colorRampPalette(brewer.pal(n = 9, 
                                                           name = 'Spectral'))(length(unique(model_data$country)))) +
-  facet_wrap(~country, ncol = 3) +
+  # facet_wrap(~country, ncol = 3) +
   theme(strip.text = element_text(size=8),
         # strip.background = element_rect(fill = NA),
-        axis.text = element_text(size = 8))
-g3
+        axis.text = element_text(size = 8)) +
+  geom_path(data = avg,
+            size = 1.5,
+            alpha = 0.7,
+            arrow = arrow(type = "closed", ends = 'last', angle = 15, length = unit(0.4, "cm")))
+
+# Study area
+africa <- cism::africa
+africa@data$iso3 <- countrycode(africa@data$COUNTRY, origin = 'country.name',destination = 'iso3c')
+map <- broom::tidy(africa, region = 'COUNTRY')
+map <- 
+  left_join(map,
+            africa@data %>%
+              dplyr::select(COUNTRY, iso3) %>%
+              mutate(country = COUNTRY) %>%
+              dplyr::rename(id = COUNTRY))
+map$study <- ifelse(map$iso3 %in% model_data$iso3,
+                    'In study',
+                    '')
+map_study <- map %>% filter(study == 'In study')
+gmap <- ggplot(data = map,
+       aes(x = long,
+           y = lat,
+           group = group)) +
+  geom_polygon(fill = NA,
+               color = 'black',
+               size = 0.3) +
+  geom_polygon(data = map_study,
+               aes(x = long,
+                   y = lat,
+                   group = group,
+                   fill = country),
+               color = 'black',
+               size = 0.3) +
+  # geom_polygon(aes(fill = study),
+  #              alpha = 0.6) +
+  # scale_fill_manual(name = '',
+  #                   values = c(NA, 'orange')) +
+  scale_fill_manual(name = '',
+                     values = colorRampPalette(brewer.pal(n = 9, 
+                                                          name = 'Spectral'))(length(unique(model_data$country)))) +
+  labs(title = 'D') +
+  theme_map() +
+  theme(legend.position = 'none',
+        plot.title = element_text(face = "bold", size = 14, hjust = 0.5,
+                                  margin = margin(b = 7)))
+
+png(filename = 'figures/descriptive.png', res = 600, width = 6000, height = 4800)
+layout <- matrix(c(1,2,3,4), nrow = 2, byrow = TRUE)
+Rmisc::multiplot(plotlist = list(g1, g2, g3, gmap), layout = layout)
+# Rmisc::multiplot(g1, g2, cols = 2)
+dev.off()
+
+# T-Tests
+# Simultaneous malaria reduction causing gdp 
+t.test(x = model_data$gdp_growth_relative[model_data$malaria_reduction_relative > 0],
+       y = model_data$gdp_growth_relative[model_data$malaria_reduction_relative <= 0])
+# Simultaneous gdp causing malaria reduction
+t.test(x = model_data$malaria_reduction_relative[model_data$gdp_growth_relative > 0],
+       y = model_data$malaria_reduction_relative[model_data$gdp_growth_relative <= 0])
+# Precedent malaria reduction causing gdp
+t.test(x = model_data$gdp_growth_relative[model_data$post_malaria_reduction],
+       y = model_data$gdp_growth_relative[!model_data$post_malaria_reduction])
+# Precedent gdp grwoth causing malaria reduction
+t.test(x = model_data$malaria_reduction_relative[model_data$post_gdp_growth],
+       y = model_data$malaria_reduction_relative[!model_data$post_gdp_growth])
+
+# Precedent malaria reduction 2 causing gdp
+t.test(x = model_data$gdp_growth_relative[model_data$post_malaria_reduction_2],
+       y = model_data$gdp_growth_relative[!model_data$post_malaria_reduction_2])
+# Precedent gdp grwoth 2 causing malaria reduction
+t.test(x = model_data$malaria_reduction_relative[model_data$post_gdp_growth_2],
+       y = model_data$malaria_reduction_relative[!model_data$post_gdp_growth_2])
+
+# Precedent malaria reduction consecutive causing gdp
+t.test(x = model_data$gdp_growth_relative[model_data$post_malaria_reduction_consec],
+       y = model_data$gdp_growth_relative[!model_data$post_malaria_reduction_consec])
+# Precedent gdp grwoth consecutive causing malaria reduction
+t.test(x = model_data$malaria_reduction_relative[model_data$post_gdp_growth_consec],
+       y = model_data$malaria_reduction_relative[!model_data$post_gdp_growth_consec])
+
+# Overall
+cors <- data.frame(year = 2001:2015,
+                   cor = NA,
+                   lwr = NA,
+                   upr = NA,
+                   p = NA)
+years <- 2001:2015
+for(i in 1:length(years)){
+  this_year <- years[i]
+  this_data <- model_data %>% dplyr::filter(year == this_year)
+  cc <- cor.test(this_data$gdp, this_data$malaria_prevalence, method = "pearson", conf.level = 0.95)
+  cors$cor[i] <- cc$estimate
+  cors$lwr[i] <- as.numeric(cc$conf.int[1])
+  cors$upr[i] <- as.numeric(cc$conf.int[2])
+  cors$p[i] <- cc$p.value
+}
+
+gcor <- ggplot(data = cors) +
+  geom_line(data = cors,
+    aes(x = year,
+        y = cor)) +
+  geom_point(data = cors,
+            aes(x = year,
+                y = cor)) +
+  # geom_ribbon(aes(x = year,
+  #                 ymin = lwr,
+  #                 ymax = upr),
+  #             alpha = 0.5) +
+  geom_errorbar(aes(x = year,
+                     ymin = lwr,
+                     ymax = upr),
+                 alpha = 0.5) +
+  geom_hline(yintercept = 0, color = 'black', lty = 2) +
+  labs(x = 'Year',
+       y = 'Correlation coefficient')
+
+png(filename = 'figures/cor.png', res = 600, width = 4000, height = 2600)
+gcor
+dev.off()
+
+
+# Models
+summary(lm(gdp_growth_relative ~ malaria_reduction_relative, data = model_data))
+summary(lm(gdp_growth_relative ~ post_malaria_reduction_consec, data = model_data))
+summary(glm(gdp_growth_relative > 0 ~ malaria_reduction_relative > 0, data = model_data, family = binomial('logit')))
+
+cor.test(model_data$gdp, model_data$malaria_prevalence, method = 'pearson')
+summary(lm(gdp ~ mp, data = model_data %>% mutate(mp = malaria_prevalence * 100)))
+
+
+plm_data <- plm::pdata.frame(x = model_data,
+                             index = c('country'))
+
+plm_results <- list()
+out <- data.frame(model = 1:2,
+                  statement = c('Malaria causes GDP',
+                                'GDP causes malaria'),
+                  p = NA,
+                  zbar = NA,
+                  null = c('Malaria decrease does not cause GDP increase',
+                           'GDP increase does not cause Malaria decrease'))
+
+fit <- pgrangertest(formula = 
+                      growth ~
+                      # log(gdp) ~ 
+                      malaria_prevalence,
+                    test = 'Zbar',
+                    # order = 3,
+                    data = plm_data)
+plm_results[[1]] <- data.frame(fit$indgranger) %>% mutate(statement = out$null[1])
+out$p[1] <- fit$p.value; out$p[1]
+out$zbar[1] <- fit$statistic
+fit <- pgrangertest(formula = malaria_prevalence ~ 
+                      growth,
+                    # log(gdp),
+                    # order = 3,
+                    test = 'Zbar',
+                    data = plm_data)
+plm_results[[2]] <- data.frame(fit$indgranger) %>% mutate(statement = out$null[2])
+
+out$p[2] <- fit$p.value; out$p[2]
+out$zbar[2] <- fit$statistic
+out
+out$title <- paste0(out$null, ' | P=', round(out$p, digits = 3))
+plm_results <- bind_rows(plm_results)
+plm_results <- plm_results %>%
+  dplyr::select(country, Chisq, p.value, statement)
+plm_results <- left_join(plm_results,
+                           out %>%
+                           mutate(statement = null) %>%
+                           dplyr::select(statement, title)) %>%
+  dplyr::select(-statement) %>%
+  dplyr::rename(statement = title)
+# Write tables
+library(xtable)
+library(knitr)
+library(kableExtra)
+
+seperator <- max(which(plm_results$statement == out$title[1]))
+table1 <- kable(plm_results %>% dplyr::select(-statement) %>%
+                  dplyr::mutate(Chisq = round(Chisq, digits = 3),
+                                p.value = round(p.value, digits = 3)) %>%
+                  dplyr::rename(Country = country,
+                                `Chi-squared` = Chisq,
+                                P = p.value),# %>%
+                  # dplyr::mutate(P = cell_spec(P, 'latex',
+                  #                  color = ifelse(P <= 0.1, 'darkorange',
+                  #                                 ifelse(P < 0.05, 'darkred', 'black')))),
+                'latex',
+                linesep = "",
+                # longtable = T,
+                booktabs = T,
+                caption = 'Pangel Granger Causality test results') %>%
+  kable_styling() %>%
+  group_rows(paste0('A. ', as.character(out$title[1])), 1,seperator) %>%
+  group_rows(paste0('B. ', as.character(out$title[2])), (seperator+1),nrow(plm_results)) %>%
+  add_footnote(label = 'Country-specific Granger causality test values. The null hypotheses (in bold) preceding each section can be rejected at a P-value of less than 0.05, both at the individual country level, or as the aggregate Granger test statistic (also in bold).', notation = 'symbol')
+# the_statement <- 'Malaria causes GDP'
+# table1 <- xtable(plm_results %>% filter(statement == the_statement) %>%
+#          dplyr::select(-statement))
+cat(table1, file = 'tables/table1.tex')
+
+
+plm_results %>%
+  group_by(statement) %>%
+  summarise(chi = mean(Chisq))
+out %>% dplyr::select(model, title, p, zbar)
+# Misc charts
+
+# png(filename = 'figures/map.png', res = 600, width = 2500, height = 2500)
+# gmap
+# dev.off()
+
+# What happens in years following gdp shrinkage
+
+# ggplot(data = model_data %>%
+#          filter(!is.na(post_malaria_reduction_cat)),
+#        aes(x = gdp_growth_relative)) +
+#   geom_density(aes(fill = post_malaria_reduction_cat),
+#                alpha = 0.6)
+
+
+g4a <- ggplot(data = model_data %>%
+                filter(!is.na(post_malaria_reduction)),
+              aes(x = post_malaria_reduction,
+                  y = gdp_growth_relative)) +
+  geom_jitter() +
+  geom_boxplot(alpha = 0.6) +
+  ylim(-0.2, 0.4) +
+  labs(x = 'Previous year\'s malaria reduction',
+       y = 'Relative GDP growth')+
+  geom_hline(yintercept = 0, color = 'red')
+
+g4b <- ggplot(data = model_data %>%
+                filter(!is.na(post_gdp_growth)),
+              aes(x = post_gdp_growth,
+                  y = malaria_reduction_relative)) +
+  geom_jitter() +
+  geom_boxplot(alpha = 0.6) +
+  ylim(-0.2, 0.4) +
+  labs(x = 'Previous year\'s GDP growth',
+       y = 'Relative malaria reduction') +
+  geom_hline(yintercept = 0, color = 'red')
+Rmisc::multiplot(g4a, g4b, cols = 2)
+
+ggplot(data = model_data %>%
+         filter(!is.na(post_malaria_reduction)),
+       aes(x = gdp_growth_relative)) +
+  geom_density(aes(group = post_malaria_reduction,
+                   fill = post_malaria_reduction),
+               alpha = 0.6)
+ggplot(data = model_data %>%
+         filter(!is.na(post_gdp_growth)),
+       aes(x = malaria_reduction_relative)) +
+  geom_density(aes(group = post_gdp_growth,
+                   fill = post_gdp_growth),
+               alpha = 0.6)
 
 # g3 <- 
 #   ggplot(data = model_data,
@@ -358,19 +773,24 @@ g3
 # g3
 # gganimate(g3, interval = 1)
 
-png(filename = 'figures/descriptive.png', res = 600, width = 6000, height = 2200)
-# layout <- matrix(c(1,2,3,3,3,3), nrow = 3, byrow = TRUE)
-# Rmisc::multiplot(plotlist = list(g1, g2, g3), layout = layout)
-Rmisc::multiplot(g1, g2, cols = 2)
-dev.off()
 
-png(filename = 'figures/paths.png', res = 600, width = 4000, height = 4000)
-g3
-dev.off()
-
-
-
-
+# Did malaria increase and gdp decrease in all countries
+x <- model_data %>%
+  arrange(year) %>%
+  filter(year == dplyr::first(year) |
+           year == dplyr::last(year)) %>%
+  group_by(country) %>%
+  summarise(m1 = dplyr::first(malaria_prevalence),
+            m2 = dplyr::last(malaria_prevalence),
+            g1 = dplyr::first(gdp),
+            g2 = dplyr::last(gdp)) %>%
+  ungroup %>%
+  mutate(m = m2 > m1,
+         g = g2 > g1)
+# Which countries had growth in malaria
+x %>% filter(m)
+# Which countries had shrinkage in gdp
+x %>% filter(!g)
 # # Demean
 # demeaner <- function(x) if(is.numeric(x)) x - mean(x) else x
 # model_data <- model_data %>%
@@ -383,34 +803,6 @@ dev.off()
 # malaria_trend <- lm(malaria_prevalence ~ year, data = model_data)
 # gdp_trend <- lm(gdp ~ year, data = model_data)
 # # Get de-trended
-
-plm_data <- plm::pdata.frame(x = model_data,
-                             index = c('country'))
-
-out <- data.frame(model = 1:2,
-                  statement = c('Malaria causes GDP',
-                                'GDP causes malaria'),
-                  p = NA)
-
-fit <- pgrangertest(formula = 
-                      growth ~
-                      # log(gdp) ~ 
-                      malaria_prevalence,
-                    test = 'Zbar',
-                    # order = 3,
-                    data = plm_data)
-out$p[1] <- fit$p.value; out$p[1]
-fit <- pgrangertest(formula = malaria_prevalence ~ 
-                      growth,
-                    # log(gdp),
-                    # order = 3,
-                    test = 'Zbar',
-                    data = plm_data)
-out$p[2] <- fit$p.value; out$p[2]
-out
-
-# Misc charts
-
 
 
 ggplot(data = x,
@@ -439,15 +831,3 @@ ggplot(data = x %>% filter(key %in% c('growth_relative', 'malaria_rel')),
   facet_wrap(~country, ncol = 4) +
   theme(legend.position = 'bottom')
 
-
-# x <- vars::VAR(y = africa_panel %>%
-#            dplyr::filter(!is.na(gdp),
-#                   !is.na(malaria_prevalence)) %>%
-#            dplyr::select(gdp,
-#                          malaria_prevalence),
-#          p = 1,
-#          type = 'both')
-# out <- vars::causality(x = x,
-#                  cause = 'gdp')
-#                  # cause = 'malaria_prevalence')
-# out
