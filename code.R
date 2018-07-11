@@ -154,6 +154,83 @@ panel <- left_join(wb, ace %>%
          gdp_per_capita_current_usd = as.numeric(gdp_per_capita_current_usd)) %>%
   mutate(former_colony = ifelse(former_colony == 1, TRUE, FALSE))
 
+# Read in poverty data
+poverty <- read_csv('data/world_bank/API_SI.POV.DDAY_DS2_en_csv_v2_9945318.csv', skip = 4)
+poverty <- poverty %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'poverty_headcount', `1960`:`2017`) %>%
+  mutate(year = as.numeric(as.character(year)))
+
+# Read in population data
+population <- read_csv('data/world_bank/API_SP.POP.TOTL_DS2_en_csv_v2_9944650.csv', skip = 4) %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'population', `1960`:`2017`) %>%
+  filter(!is.na(population)) %>%
+  mutate(year = as.numeric(as.character(year)))
+
+# Read in tourism data
+tourism <- read_csv('data/world_bank/API_ST.INT.XPND.MP.ZS_DS2_en_csv_v2_9986587.csv', skip = 4) %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'tourism', `1960`:`2017`) %>%
+  filter(!is.na(tourism)) %>%
+  mutate(year = as.numeric(as.character(year)))
+
+# Read in gdp per cap
+gdp_per_cap <- read_csv('data/world_bank/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_9944664/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_9944664.csv', skip = 4) %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'gdp_per_capita', `1960`:`2017`) %>%
+  filter(!is.na(gdp_per_capita)) %>%
+  mutate(year = as.numeric(as.character(year)))
+
+# Read in gini
+gini <- read_csv('data/world_bank/API_SI.POV.GINI_DS2_en_csv_v2_9944669.csv', skip = 4) %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'gini_index', `1960`:`2017`) %>%
+  filter(!is.na(gini_index))%>%
+  mutate(year = as.numeric(as.character(year)))
+
+# Read in % of wealth belonging to bottom 20%
+wealth20 <- read_csv('data/world_bank/API_SI.DST.FRST.20_DS2_en_csv_v2_9948163.csv',
+                     skip = 4) %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'wealth_20', `1960`:`2017`) %>%
+  filter(!is.na(wealth_20)) %>%
+  mutate(year = as.numeric(as.character(year)))
+
+fdi <- read_csv('data/world_bank/API_BX.KLT.DINV.CD.WD_DS2_en_csv_v2_9984841.csv',
+                     skip = 4) %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'fdi', `1960`:`2017`) %>%
+  filter(!is.na(fdi)) %>%
+  mutate(year = as.numeric(as.character(year)))
+
+inflation <- read_csv('data/world_bank/API_FP.CPI.TOTL.ZG_DS2_en_csv_v2_9984803.csv',
+                      skip = 4) %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'inflation', `1960`:`2017`) %>%
+  filter(!is.na(inflation)) %>%
+  mutate(year = as.numeric(as.character(year)))
+
+# Join the above to the panel
+panel <- 
+  panel %>%
+  left_join(wealth20) %>%
+  left_join(gini) %>%
+  left_join(population) %>%
+  left_join(gdp_per_cap) %>%
+  left_join(poverty) %>%
+  left_join(tourism) %>%
+  left_join(fdi) %>%
+  left_join(inflation)
+
 # Get with gaminder data
 library(gapminder)
 gm <- gapminder::gapminder %>%
@@ -178,6 +255,39 @@ panel <- panel %>%
 
 # Make an easier named gdp variable
 panel$gdp <- panel$gdp_per_capita_current_usd
+
+# Read in who data
+who <- read_excel('data/who/AllData.xlsx')
+# Clean up
+who <- who %>%
+  dplyr::rename(year = Year,
+                country = `Country Name`,
+                iso3 = `Country Code`,
+                income_group_who = `Country Income Group`,
+                indicator_name = `Indicator Name`,
+                value = Value) %>%
+  dplyr::select(year, country, iso3, income_group_who,
+                indicator_name,
+                value)
+indicators <- sort(unique(who$indicator_name))
+# Keep only indicators of relevance
+indicators <- c('Capital health expenditure',
+                'Current Health Expenditure (CHE) as % Gross Domestic Product (GDP)',
+                'Domestic General Government Health Expenditure (GGHE-D) as % Gross Domestic Product (GDP)',
+                'External Health Expenditure (EXT) per Capita in US$',
+                'External sources of spending on Malaria',
+                'External sources of spending on Injuries',
+                'Public domestic sources of spending on Malaria')
+for(i in 1:length(indicators)){
+  this_indicator <- indicators[i]
+  sub_data <- who %>% filter(indicator_name == this_indicator)
+  sub_data <- sub_data %>% 
+    dplyr::select(year, iso3, value)
+  names(sub_data)[3] <- gsub('$', 'dollars', gsub('%', 'percent', gsub(' ', '_', tolower(this_indicator)), fixed = TRUE), fixed = TRUE)
+  sub_data <- sub_data %>% dplyr::distinct(year, iso3, .keep_all = TRUE)
+  panel <- left_join(panel, sub_data)
+}
+#
 
 # Define whether 2000 level of malaria was high
 panel <- panel %>%
@@ -209,6 +319,206 @@ panel <- panel %>%
            (dplyr::lag(gdp, n = 1) / 
               dplyr::lag(gdp, n = 2) - 1)) %>%
   ungroup
+
+# Read in more MAP data
+if('map_prepared.RData' %in% dir()){
+  load('map_prepared.RData')
+} else {
+  # Read in malaria atlas project data
+  mosq00 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2000.tif')
+  mosq01 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2001.tif')
+  mosq02 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2002.tif')
+  mosq03 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2003.tif')
+  mosq04 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2004.tif')
+  mosq05 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2005.tif')
+  mosq06 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2006.tif')
+  mosq07 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2007.tif')
+  mosq08 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2008.tif')
+  mosq09 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2009.tif')
+  mosq10 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2010.tif')
+  mosq11 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2011.tif')
+  mosq12 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2012.tif')
+  mosq13 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2013.tif')
+  mosq14 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2014.tif')
+  mosq15 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ACT.2015.tif')
+  
+  u = brick(mosq00,
+            mosq01,
+            mosq02,
+            mosq03,
+            mosq04,
+            mosq05,
+            mosq06,
+            mosq07,
+            mosq08,
+            mosq09,
+            mosq10,
+            mosq11,
+            mosq12,
+            mosq13,
+            mosq14,
+            mosq15)
+  names(u) <- paste0('year_', as.character(2000:2015))
+  u <- as(u, 'SpatialPixelsDataFrame')
+  # projection(mosq) <- "+proj=utm +zone=48 +datum=WGS84"
+  
+  africa_projected <- africa
+  projection(africa_projected) <- "+proj=utm +zone=48 +datum=WGS84"
+  areas <- rgeos::gArea(africa_projected, byid = TRUE)
+  # a <- extract(cowsquito, africa, fun = mean, na.rm = TRUE)
+  years <- 2000:2015
+  results <- data.frame(country = africa@data$NAME_0,
+                        area = areas,
+                        year = NA,
+                        avg = NA,
+                        a_max = NA,
+                        a_median = NA,
+                        a_p = NA)
+  results_list <- list()
+  for(i in 1:length(years)){
+    this_year <- years[i]
+    message(this_year)
+    this_year_digits <- substr(this_year, 3, 4)
+    this_raster <- get(paste0('mosq', this_year_digits))
+    values(this_raster)[!is.finite(values(this_raster))] <- 0
+    b <- extract(this_raster, africa)
+    a_mean <- unlist(lapply(b, FUN=mean, na.rm = T))
+    a_max <- unlist(lapply(b, FUN=max, na.rm = T))
+    a_median <- unlist(lapply(b, function(x){y <- median(x, na.rm = TRUE); ifelse(is.null(y), 0, y)}))
+    a_p <- unlist(lapply(b, FUN=function(x){length(which(x > median(values(this_raster), na.rm = TRUE))) / length(x) * 100}))
+    results_this_year <- results
+    results_this_year$year <- this_year
+    results$avg<- a_mean
+    results_this_year$a_max <- a_max
+    results_this_year$a_median <- a_median
+    results_this_year$a_p <- a_p
+    results_list[[i]] <- results_this_year
+  }
+  results_bound <- bind_rows(results_list)
+  weighted_mean <- function(x, w, na.rm, ...){
+    finites <- which(is.finite(x))
+    x <- x[finites]
+    w <- w[finites]
+    weighted.mean(x, w, na.rm)
+  }
+  results <- results_bound %>%
+    group_by(country, year) %>%
+    summarise(avg = weighted_mean(avg, w = area, na.rm = TRUE),
+              a_max = weighted_mean(a_max, w = a_max, na.rm = TRUE),
+              a_median = weighted_mean(a_median, w = a_median, na.rm = TRUE),
+              a_p = weighted_mean(a_p, w = a_p, na.rm = TRUE)) %>%
+    ungroup
+  save(results,
+       file = 'map_prepared.RData')
+}
+act <- results
+
+if('itn_prepared.RData' %in% dir()){
+  load('itn_prepared.RData')
+} else {
+  # Read in malaria atlas project data
+  mosq00 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2000.tif')
+  mosq01 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2001.tif')
+  mosq02 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2002.tif')
+  mosq03 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2003.tif')
+  mosq04 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2004.tif')
+  mosq05 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2005.tif')
+  mosq06 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2006.tif')
+  mosq07 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2007.tif')
+  mosq08 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2008.tif')
+  mosq09 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2009.tif')
+  mosq10 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2010.tif')
+  mosq11 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2011.tif')
+  mosq12 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2012.tif')
+  mosq13 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2013.tif')
+  mosq14 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2014.tif')
+  mosq15 <- raster('data/malaria_atlas_project/2015_Nature_Africa_ITN.2015.tif')
+  
+  u = brick(mosq00,
+            mosq01,
+            mosq02,
+            mosq03,
+            mosq04,
+            mosq05,
+            mosq06,
+            mosq07,
+            mosq08,
+            mosq09,
+            mosq10,
+            mosq11,
+            mosq12,
+            mosq13,
+            mosq14,
+            mosq15)
+  names(u) <- paste0('year_', as.character(2000:2015))
+  u <- as(u, 'SpatialPixelsDataFrame')
+  # projection(mosq) <- "+proj=utm +zone=48 +datum=WGS84"
+  
+  africa_projected <- africa
+  projection(africa_projected) <- "+proj=utm +zone=48 +datum=WGS84"
+  areas <- rgeos::gArea(africa_projected, byid = TRUE)
+  # a <- extract(cowsquito, africa, fun = mean, na.rm = TRUE)
+  years <- 2000:2015
+  results_itn <- data.frame(country = africa@data$NAME_0,
+                        area = areas,
+                        year = NA,
+                        avg = NA,
+                        a_max = NA,
+                        a_median = NA,
+                        a_p = NA)
+  results_itn_list <- list()
+  for(i in 1:length(years)){
+    this_year <- years[i]
+    message(this_year)
+    this_year_digits <- substr(this_year, 3, 4)
+    this_raster <- get(paste0('mosq', this_year_digits))
+    values(this_raster)[!is.finite(values(this_raster))] <- 0
+    b <- extract(this_raster, africa)
+    a_mean <- unlist(lapply(b, FUN=mean, na.rm = T))
+    a_max <- unlist(lapply(b, FUN=max, na.rm = T))
+    a_median <- unlist(lapply(b, function(x){y <- median(x, na.rm = TRUE); ifelse(is.null(y), 0, y)}))
+    a_p <- unlist(lapply(b, FUN=function(x){length(which(x > median(values(this_raster), na.rm = TRUE))) / length(x) * 100}))
+    results_itn_this_year <- results_itn
+    results_itn_this_year$year <- this_year
+    results_itn$avg<- a_mean
+    results_itn_this_year$a_max <- a_max
+    results_itn_this_year$a_median <- a_median
+    results_itn_this_year$a_p <- a_p
+    results_itn_list[[i]] <- results_itn_this_year
+  }
+  results_itn_bound <- bind_rows(results_itn_list)
+  weighted_mean <- function(x, w, na.rm, ...){
+    finites <- which(is.finite(x))
+    x <- x[finites]
+    w <- w[finites]
+    weighted.mean(x, w, na.rm)
+  }
+  itn <- results_itn_bound %>%
+    group_by(country, year) %>%
+    summarise(avg = weighted_mean(avg, w = area, na.rm = TRUE),
+              a_max = weighted_mean(a_max, w = a_max, na.rm = TRUE),
+              a_median = weighted_mean(a_median, w = a_median, na.rm = TRUE),
+              a_p = weighted_mean(a_p, w = a_p, na.rm = TRUE)) %>%
+    ungroup
+  save(itn,
+       file = 'itn_prepared.RData')
+}
+
+# Reformat act and itn data to get ready to join
+act <- act %>% dplyr::select(country, year, avg) %>%
+  mutate(avg = ifelse(is.na(avg), 0, avg)) %>%
+  dplyr::rename(act = avg)
+itn <- itn %>% dplyr::select(country, year, avg) %>%
+  mutate(avg = ifelse(is.na(avg), 0, avg)) %>%
+  dplyr::rename(itn = avg)
+itn <- itn %>% dplyr::distinct(country, year, .keep_all = TRUE)
+act <- act %>% dplyr::distinct(country, year, .keep_all = TRUE)
+
+itn <- itn %>% mutate(iso3 = countrycode(country, origin = 'country.name',destination = 'iso3c')) %>% dplyr::select(-country)
+act <- act %>% mutate(iso3 = countrycode(country, origin = 'country.name',destination = 'iso3c')) %>% dplyr::select(-country)
+
+panel <- left_join(panel, itn)
+panel <- left_join(panel, act)
 
 # Get weather data
 africa <- cism::africa
@@ -245,6 +555,24 @@ if('weather.RData' %in% dir()){
   save(weather, file = 'weather.RData')
 }
 
+# Read in oil exports data
+oil <- read_csv('data/undata/UNdata_Export_20180702_093858550.csv')
+oil <- oil %>%
+  dplyr::rename(country = `Country or Area`,
+                year = Year,
+                oil = Quantity) %>%
+  dplyr::select(country, year, oil)
+oil$iso3 <- countrycode(oil$country, origin = 'country.name',destination = 'iso3c',
+                        nomatch = NULL)
+oil <- oil %>%
+  filter(!is.na(country),
+         !is.na(year),
+         !is.na(iso3)) %>%
+  mutate(oil = ifelse(is.na(oil), 0, oil))
+oil$country <- NULL
+panel <-
+  left_join(panel, oil)
+
 
 # Keep only those countries in Africa
 africa_panel <- panel %>%
@@ -256,7 +584,45 @@ africa_panel <- panel %>%
 africa_panel <- africa_panel %>% 
   left_join(weather)
 
+
+# # Plot of gdp by year
+# plot_data <- africa_panel %>% filter(year >= 2012) %>%
+#   arrange(year) %>%
+#   group_by(iso3) %>%
+#   mutate(down = gdp[year==2015] < gdp[year == 2013]) %>%
+#   ungroup %>%
+#   filter(!is.na(down)) %>%
+#   mutate(down = ifelse(down, 'GDP decrease', 'GDP increase'))
+# label_df <- plot_data %>%
+#   filter(year == 2016)
+# ggplot(data = plot_data,
+#        aes(x = year,
+#            y = gdp,
+#            group = iso3,
+#            color = iso3)) + 
+#   geom_path() + 
+#   geom_point() +
+#   scale_y_log10(breaks = c(100, 500, 1000, 2000, 5000, 10000)) +
+#   facet_wrap(~down) +
+#   theme(axis.text.x = element_text(angle = 90)) +
+#   geom_label(data = label_df,
+#              aes(x = year,
+#                  y = gdp,
+#                  color = iso3,
+#                  label = country),
+#              alpha = 0.6,
+#              size = 2) +
+#   theme(legend.position = 'none') +
+#   labs(x = 'Year',
+#        y = 'GDP per capita')
+
+# Remove duplicates
+africa_panel <- africa_panel %>%
+  dplyr::distinct(year, iso3, .keep_all = TRUE)
+
+
 model_data <- africa_panel %>%
+  filter(year >= 2000) %>%
   dplyr::filter(malaria_prevalence_2001_high) %>%
   dplyr::filter(!is.na(gdp),
                 !is.na(malaria_prevalence)) %>%
@@ -267,6 +633,7 @@ model_data <- africa_panel %>%
   dplyr::filter(!any(gdp > 10000)) %>%
   dplyr::mutate(n = n()) %>%
   ungroup %>%
+  # Make balanced
   dplyr::filter(n == median(n)) %>%
   dplyr::select(-n) %>%
   # Calculate growth
@@ -287,6 +654,7 @@ model_data <- model_data %>%
 
 model_data <- model_data %>%
   arrange(country,year)
+
 
 # Distribution of gdp in post growth year
 model_data <- model_data %>%
@@ -309,17 +677,92 @@ model_data <- model_data %>%
          log_change_malaria_lag = log(lag(malaria_prevalence, 1)) - log(lag(malaria_prevalence, 2))) %>%
   ungroup
 
+# Get malaria spending variables
+model_data <- model_data %>%
+  mutate(malaria_spending = 
+           external_sources_of_spending_on_malaria + 
+           public_domestic_sources_of_spending_on_malaria,
+         health_spending = `current_health_expenditure_(che)_as_percent_gross_domestic_product_(gdp)`) 
+# Interpolate some variables
+model_data <- model_data %>%
+  arrange(year) %>%
+  dplyr::distinct(iso3, year, .keep_all = TRUE) %>%
+  group_by(iso3) %>%
+  mutate(wealth_20 = zoo::na.approx(object = as.numeric(wealth_20), x = year, na.rm = FALSE),
+         gini_index = zoo::na.approx(object = as.numeric(gini_index), x = year, na.rm = FALSE),
+         population = zoo::na.approx(object = as.numeric(population), x = year, na.rm = FALSE),
+         gdp_per_capita = zoo::na.approx(object = as.numeric(gdp_per_capita), x = year, na.rm = FALSE),
+         poverty_headcount = zoo::na.approx(object = as.numeric(poverty_headcount), x = year, na.rm = FALSE))
+
+# # Read in bruckner's commodity prices # TOO OLD
+# library(readstata13)
+# bruck <- readstata13::read.dta13('bruckner/data-stata.dta')
+# bruck_meaning <- data.frame(var = names(bruck)[1:15], label = attr(bruck, 'var.labels'))
+# 
+# # Use bruckner commodity
+# bruck$iso3 <- countrycode(bruck$country, origin = 'country.name',destination = 'iso3c')
+# bruck <- data.frame(bruck)
+# bruck$commodity <- bruck$index_g_l
+# bruck <- bruck %>% dplyr::select(iso3, year, commodity)
+# 
+# # Join bruckner to model data
+# model_data <- left_join(model_data, bruck)
+
+# Get malaria spending and health spending lag
+model_data <- model_data %>%
+  arrange(year) %>%
+  group_by(iso3) %>%
+  mutate(malaria_spending_lag = dplyr::lag(malaria_spending, 1),
+         health_spending_lag = dplyr::lag(health_spending, 1)) %>%
+  ungroup
+
+# Remove duplicates
+model_data <- model_data %>%
+  dplyr::distinct(year, iso3, .keep_all = TRUE)
+
+# Diff-in-diff
+# gdp = price of oil (country specific) + oil-non-oil + before/after crisis + interaction
+# malaria = gdp + other things + unexplained variance from above
+# Find commodity price index
+
+
+# IV with fixed effects
+plm_data <- plm::pdata.frame(x = model_data, index = c('iso3', 'year'))
+plm_data <- plm_data %>% filter(!is.na(malaria_reduction_relative_lag))
+fit_plm <-  plm(gdp_growth_relative ~ malaria_reduction_relative_lag, data=plm_data, index = c('iso3', 'year'), model="within")
+fit_plm_iv <- plm(gdp_growth_relative ~ malaria_reduction_relative_lag | act + itn, data= plm_data, index = c('iso3', 'year'), model="within")
+
+summary(fit_plm_iv)
+
 # Causality using VAR 
 # like Blanchard and Perotti (2002) and Bruckner (2011)
-bruckner_data <- model_data %>% filter(!is.na(model_data$log_change_malaria),
-                                       !is.na(model_data$log_change_gdp_lag),
-                                       !is.na(prcp),
-                                       !is.na(model_data$log_change_gdp),
-                                       !is.na(model_data$log_change_malaria_lag))
-bruckner1 <- lm(malaria_reduction_relative ~ gdp_growth_relative_lag + prcp, data = bruckner_data)
+bruckner_data <- model_data %>% filter(!is.na(log_change_malaria),
+                                       !is.na(log_change_gdp_lag),
+                                       # !is.na(prcp),
+                                       # !is.na(malaria_spending),
+                                       # !is.na(health_spending),
+                                       # !is.na(health_spending),
+                                       !is.na(commodity),
+                                       !is.na(log_change_gdp),
+                                       !is.na(log_change_malaria_lag))
+bruckner1 <- lm(malaria_reduction_relative ~ gdp_growth_relative_lag + commodity, data = bruckner_data)
 summary(bruckner1)
-bruckner2 <- lm(gdp_growth_relative ~ malaria_reduction_relative_lag + residuals(bruckner1), data = bruckner_data) 
+bruckner2 <- lm(gdp_growth_relative ~ malaria_reduction_relative_lag + malaria_spending + residuals(bruckner1), data = bruckner_data) 
 summary(bruckner2)
+
+# Ideas
+# - Use FDI
+# - Use Fx
+# - Use commodity price index
+# - Switch the equation, and find something that affects malaria but not GDP (such as ACT or ITN coverage at national level from MAP, already downloaded)
+
+library(lfe)
+bruck1 <- felm(malaria_reduction_relative ~ gdp_growth_relative_lag + malaria_spending_lag  | iso3 | 0 | 0,
+               data = bruckner_data)
+summary(bruck1)
+bruck2 <- felm(gdp_growth_relative ~ malaria_reduction_relative_lag + malaria_spending_lag + residuals(bruck1) | iso3 | 0 | 0, data = bruckner_data)
+summary(bruck2)
+
 
 # Make some table of results here
 library(knitr)
