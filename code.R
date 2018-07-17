@@ -162,6 +162,14 @@ poverty <- poverty %>%
   tidyr::gather(key = year, value = 'poverty_headcount', `1960`:`2017`) %>%
   mutate(year = as.numeric(as.character(year)))
 
+# Read in gasoline data
+gas <- read_csv('data/world_bank/API_EP.PMP.SGAS.CD_DS2_en_csv_v2_9987049.csv', skip = 4)
+gas <- gas %>%
+  dplyr::rename(iso3 = `Country Code`) %>%
+  dplyr::select(iso3, `1960`:`2017`) %>%
+  tidyr::gather(key = year, value = 'gas', `1960`:`2017`) %>%
+  mutate(year = as.numeric(as.character(year)))
+
 # Read in population data
 population <- read_csv('data/world_bank/API_SP.POP.TOTL_DS2_en_csv_v2_9944650.csv', skip = 4) %>%
   dplyr::rename(iso3 = `Country Code`) %>%
@@ -229,7 +237,8 @@ panel <-
   left_join(poverty) %>%
   left_join(tourism) %>%
   left_join(fdi) %>%
-  left_join(inflation)
+  left_join(inflation) %>%
+  left_join(gas)
 
 # Get with gaminder data
 library(gapminder)
@@ -698,13 +707,13 @@ model_data <- model_data %>%
 # library(readstata13)
 # bruck <- readstata13::read.dta13('bruckner/data-stata.dta')
 # bruck_meaning <- data.frame(var = names(bruck)[1:15], label = attr(bruck, 'var.labels'))
-# 
+
 # # Use bruckner commodity
 # bruck$iso3 <- countrycode(bruck$country, origin = 'country.name',destination = 'iso3c')
 # bruck <- data.frame(bruck)
 # bruck$commodity <- bruck$index_g_l
 # bruck <- bruck %>% dplyr::select(iso3, year, commodity)
-# 
+
 # # Join bruckner to model data
 # model_data <- left_join(model_data, bruck)
 
