@@ -306,6 +306,7 @@ panel <- panel %>%
   mutate(malaria_prevalence_2001_high = malaria_prevalence_2001 >= 0.1)
 
 # Get reduction in malaria and increase in gdp
+panel$gas <- as.numeric(as.character(panel$gas))
 panel <- panel %>%
   arrange(year) %>%
   group_by(country) %>%
@@ -326,7 +327,16 @@ panel <- panel %>%
            dplyr::lag(gdp, n = 1) - 1),
          gdp_growth_relative_lag = 
            (dplyr::lag(gdp, n = 1) / 
-              dplyr::lag(gdp, n = 2) - 1)) %>%
+              dplyr::lag(gas, n = 2) - 1),
+         gas_growth = 
+           gas - 
+           dplyr::lag(gas, n = 1),
+         gas_growth_relative = 
+           (gas / 
+              dplyr::lag(gas, n = 1) - 1),
+         gas_growth_relative_lag = 
+           (dplyr::lag(gas, n = 1) / 
+              dplyr::lag(gas, n = 2) - 1)) %>%
   ungroup
 
 # Read in more MAP data
@@ -657,8 +667,10 @@ model_data <- model_data %>%
   group_by(country) %>%
   mutate(gdp_lag1 = dplyr::lag(gdp, 1),
          malaria_prevalence_lag1 = dplyr::lag(malaria_prevalence),
+         gas_lag1 = dplyr::lag(gas, 1),
          gdp_lead1 = dplyr::lead(gdp, 1),
-         malaria_prevalence_lead1 = dplyr::lead(malaria_prevalence, 1)) %>%
+         malaria_prevalence_lead1 = dplyr::lead(malaria_prevalence, 1),
+         gas_lead1 = dplyr::lead(gas, 1)) %>%
   ungroup 
 
 model_data <- model_data %>%
@@ -680,9 +692,11 @@ model_data <- model_data %>%
 # Get log change
 model_data <- model_data %>%
   mutate(log_change_gdp = log(gdp) - log(gdp_lag1),
+         log_change_gas = log(gas) - log(gas_lag1),
          log_change_malaria = log(malaria_prevalence) - log(malaria_prevalence_lag1)) %>%
   group_by(country) %>%
   mutate(log_change_gdp_lag = log(lag(gdp, 1)) - log(lag(gdp,2)),
+         log_change_gas_lag = log(lag(gas, 1)) - log(lag(gas, 2)),
          log_change_malaria_lag = log(lag(malaria_prevalence, 1)) - log(lag(malaria_prevalence, 2))) %>%
   ungroup
 
@@ -701,6 +715,7 @@ model_data <- model_data %>%
          gini_index = zoo::na.approx(object = as.numeric(gini_index), x = year, na.rm = FALSE),
          population = zoo::na.approx(object = as.numeric(population), x = year, na.rm = FALSE),
          gdp_per_capita = zoo::na.approx(object = as.numeric(gdp_per_capita), x = year, na.rm = FALSE),
+         gas = zoo::na.approx(object = as.numeric(gas), x = year, na.rm = FALSE),
          poverty_headcount = zoo::na.approx(object = as.numeric(poverty_headcount), x = year, na.rm = FALSE))
 
 # # Read in bruckner's commodity prices # TOO OLD
@@ -735,57 +750,248 @@ model_data <- model_data %>%
 # Find commodity price index
 
 
-# IV with fixed effects
-plm_data <- plm::pdata.frame(x = model_data, index = c('iso3', 'year'))
-plm_data <- plm_data %>% filter(!is.na(malaria_reduction_relative_lag))
-fit_plm <-  plm(gdp_growth_relative ~ malaria_reduction_relative_lag, data=plm_data, index = c('iso3', 'year'), model="within")
-fit_plm_iv <- plm(gdp_growth_relative ~ malaria_reduction_relative_lag | act + itn, data= plm_data, index = c('iso3', 'year'), model="within")
-
-summary(fit_plm_iv)
+# # IV with fixed effects
+# plm_data <- plm::pdata.frame(x = model_data, index = c('iso3', 'year'))
+# plm_data <- plm_data %>% filter(!is.na(malaria_reduction_relative_lag))
+# fit_plm <-  plm(gdp_growth_relative ~ malaria_reduction_relative_lag, data=plm_data, index = c('iso3', 'year'), model="within")
+# fit_plm_iv <- plm(gdp_growth_relative ~ malaria_reduction_relative_lag | act + itn, data= plm_data, index = c('iso3', 'year'), model="within")
+# summary(fit_plm_iv)
 
 # Causality using VAR 
 # like Blanchard and Perotti (2002) and Bruckner (2011)
-bruckner_data <- model_data %>% filter(!is.na(log_change_malaria),
-                                       !is.na(log_change_gdp_lag),
+bruckner_data <- model_data %>% filter(!is.na(malaria_reduction_relative),
+                                       !is.na(gdp_growth_relative_lag),
+                                       !is.na(malaria_reduction_relative_lag),
+                                       !is.na(gdp_growth_relative_lag),
                                        # !is.na(prcp),
                                        # !is.na(malaria_spending),
                                        # !is.na(health_spending),
                                        # !is.na(health_spending),
-                                       !is.na(commodity),
-                                       !is.na(log_change_gdp),
-                                       !is.na(log_change_malaria_lag))
-bruckner1 <- lm(malaria_reduction_relative ~ gdp_growth_relative_lag + commodity, data = bruckner_data)
-summary(bruckner1)
-bruckner2 <- lm(gdp_growth_relative ~ malaria_reduction_relative_lag + malaria_spending + residuals(bruckner1), data = bruckner_data) 
-summary(bruckner2)
+                                       !is.na(itn),
+                                       !is.na(gas))
+# bruckner1 <- lm(malaria_reduction_relative ~ gdp_growth_relative_lag + gas, data = bruckner_data)
+# residuals_df <- data.frame(rn = names(residuals(bruckner1)),
+#                            residual = as.numeric(residuals(bruckner1)))
+# bruckner_data$rn <- row.names(bruckner_data)
+# bruckner_data <- left_join(bruckner_data, residuals_df, by = 'rn')
+# summary(bruckner1)
+# bruckner2 <- lm(gdp_growth_relative ~ malaria_reduction_relative_lag + itn + residual, data = bruckner_data) 
+# summary(bruckner2)
 
-# Ideas
-# - Use FDI
-# - Use Fx
-# - Use commodity price index
-# - Switch the equation, and find something that affects malaria but not GDP (such as ACT or ITN coverage at national level from MAP, already downloaded)
 
 library(lfe)
-bruck1 <- felm(malaria_reduction_relative ~ gdp_growth_relative_lag + malaria_spending_lag  | iso3 | 0 | 0,
+
+# HEALTH TO WEALTH
+bruck1 <- felm(malaria_reduction_relative ~ gdp_growth_relative_lag + itn  | iso3 | 0 | 0,
                data = bruckner_data)
 summary(bruck1)
-bruck2 <- felm(gdp_growth_relative ~ malaria_reduction_relative_lag + malaria_spending_lag + residuals(bruck1) | iso3 | 0 | 0, data = bruckner_data)
+bruck2 <- felm(gdp_growth_relative ~  itn + residuals(bruck1) | iso3 | 0 | 0, data = bruckner_data)
 summary(bruck2)
 
+# WEALTH TO HEALTH
+bruck3 <- felm(gdp_growth_relative ~ malaria_reduction_relative_lag + gas  | iso3 | 0 | 0,
+               data = bruckner_data)
+summary(bruck3)
+bruck4 <- felm(malaria_reduction_relative ~  gas + residuals(bruck3) | iso3 | 0 | 0, data = bruckner_data)
+summary(bruck4)
 
 # Make some table of results here
+make_results <- function(x){
+  broom::tidy(coefficients(summary(x)))
+}
+bruck_results <-
+  bind_rows(
+    make_results(bruck2) %>% mutate(name = 'Health to wealth'),
+    make_results(bruck4) %>% mutate(name = 'Wealth to health')
+      
+  )  %>%
+  dplyr::rename(Coefficient = `.rownames`,
+                `S.E.` = `Std..Error`,
+                `P-value` = `Pr...t..`,
+                Name = name) %>%
+  dplyr::select(Name, Coefficient, Estimate, `S.E.`, `P-value`) %>%
+  mutate(Coefficient = ifelse(Coefficient  %in% c('itn'), 'IV (ITN)',
+                              ifelse(Coefficient == 'gas', 'IV (gas)',
+                                ifelse(grepl('residuals', Coefficient), 'IV residuals', Hmisc::capitalize(gsub('_', ' ', Coefficient)
+                                     )))))
+bruck_results$Name[c(2,4)] <- ''
+names(bruck_results)[1] <- ' '
 library(knitr)
 library(kableExtra)
-table2 <- kable(broom::tidy(summary(bruckner2)),
+
+bruck_results_iv <-
+  bind_rows(
+    make_results(bruck1) %>% mutate(name = 'Wealth to health (IV)'),
+    make_results(bruck3) %>% mutate(name = 'Health to wealth (IV)')
+    
+  )  %>%
+  dplyr::rename(Coefficient = `.rownames`,
+                `S.E.` = `Std..Error`,
+                `P-value` = `Pr...t..`,
+                Name = name) %>%
+  dplyr::select(Name, Coefficient, Estimate, `S.E.`, `P-value`) %>%
+  mutate(Coefficient = ifelse(Coefficient  %in% c('itn'), 'IV (ITN)',
+                              ifelse(Coefficient == 'gas', 'IV (gas)',
+                                     ifelse(grepl('residuals', Coefficient), 'Residuals from IV', Hmisc::capitalize(gsub('_', ' ', Coefficient)
+                                     )))))
+bruck_results_iv$Name[c(2, 4)] <- ''
+names(bruck_results_iv)[1] <- ' '
+
+
+# Combine the two
+bb <- bind_rows(
+  bruck_results_iv %>% mutate(Step = '1'),
+  bruck_results %>% mutate(Step = '2')
+) %>%
+  dplyr::select(Step, ` `, Coefficient, Estimate, `S.E.`, `P-value`)
+bb$Step[duplicated(bb$Step)] <- ''
+bb$Coefficient <- ifelse(bb$Coefficient == 'Gdp growth relative lag', 'GDP',
+                         ifelse(bb$Coefficient == 'Malaria reduction relative lag',
+                                'Malaria',
+                                bb$Coefficient))
+names(bb)[2] <- 'Pathway'
+table0 <- kable(bb,
                 'latex',
                 linesep = "",
                 # longtable = T,
                 booktabs = T,
-                caption = 'Placeholder table for Bruckner results') %>%
+                digits = 3,
+                caption = 'Results of Bruckner second-step models') %>%
   kable_styling() %>%
-  add_footnote(label = 'Some comments on the table.', notation = 'symbol')
-cat(table2, file = 'tables/table2.tex')
+  add_footnote(label = 'In step 2, "Health to wealth" refers to the lagged log changes in the prevalence of Malaria on relative log changes in growth in GDP per capita; "Wealth to health" refers to the inverse.', notation = 'symbol')
+cat(table0, file = 'tables/table0.tex')
 
+### ROBUSTNESS 1: INTRODUCTION OF ACT
+act_data <- model_data %>%
+  dplyr::select(year, iso3, act, gdp) %>%
+  ungroup %>%
+  mutate(act_ok = act >= 0.1) %>%
+  arrange(year) %>%
+  group_by(iso3) %>% 
+  mutate(post_act = cumsum(act_ok)) %>%
+  ungroup %>%
+  mutate(post_act = post_act > 0) %>%
+  group_by(iso3) %>%
+  mutate(year_act = min(year[post_act])) %>%
+  ungroup %>%
+  mutate(act_year = year - year_act) %>%
+  group_by(iso3) %>%
+  mutate(gdp_base = min(gdp[act_year == -1])) %>%
+  ungroup %>%
+  filter(!is.infinite(act_year))  %>%
+  mutate(gdp_relative = gdp / gdp_base * 100)
+
+png(filename = 'figures/act.png', res = 600, width = 4000, height = 2600)
+ggplot() +
+  geom_line(data = act_data %>% filter(!post_act),
+            aes(x = act_year,
+                y = gdp_relative,
+                group = iso3),
+            alpha = 0.6) +
+  geom_line(data = act_data %>% filter(post_act),
+            aes(x = act_year,
+                y = gdp_relative,
+                group = iso3),
+            alpha = 0.6) +
+  geom_smooth(data = act_data,
+              aes(x = act_year,
+                  y = gdp_relative,
+                  group = post_act),
+              method='lm',formula=y~x) +
+  cowplot::theme_cowplot() +
+  labs(x = 'Year (0 = introduction of ACT)',
+       y = 'GDP (% of year=-1)') +
+  geom_line(data =act_data %>%
+              filter(act_year %in% c(-1:0)) %>%
+              group_by(act_year) %>%
+              summarise(gdp_relative = mean(gdp_relative)) %>%
+            ungroup,
+            aes(x = act_year,
+                y = gdp_relative),
+            lty = 2,
+            alpha = 0.6,
+            size = 0.5,
+            col = 'red')
+dev.off()
+
+act_fit1 <- lm(gdp_relative ~ act_year, data = act_data %>% filter(!post_act))
+act_fit2 <- lm(gdp_relative ~ act_year, data = act_data %>% filter(post_act))
+confint(act_fit1)
+confint(act_fit2)
+predict(act_fit1)
+
+act_data %>%
+  filter(act_year %in% -1:0) %>%
+  group_by(post_act) %>%
+  summarise(gdp_relative = mean(gdp_relative)) %>%
+  ungroup
+
+#### ROBUSTNESS 2: EFFECT OF FINANCIAL CRISIS
+fc <- model_data %>%
+  group_by(iso3) %>%
+  summarise(gdp2008 = gdp[year == 2008],
+            gdp2009 = gdp[year == 2009]) %>%
+  ungroup %>%
+  mutate(down = gdp2009 < gdp2008,
+         down_much = gdp2009 - gdp2008) %>%
+  mutate(p = down_much / gdp2008 * 100)
+fc <- model_data %>%
+  dplyr::select(iso3, year, gdp, malaria_reduction_relative) %>%
+  left_join(fc)
+
+library(ggrepel)
+
+png(filename = 'figures/crisis.png', res = 600, width = 4000, height = 5000)
+g1 <- ggplot(data = fc %>% filter(year == 2009),
+             aes(x = p,
+                 y = malaria_reduction_relative)) +
+  geom_smooth(method='lm',formula=y~x) +
+  geom_point() +
+  cowplot::theme_cowplot() +
+  geom_text_repel(aes(label = iso3), size = 3) +
+  labs(x = '% GDP growth 2008-9',
+       y = 'Malaria reduction 2008-9',
+       title = 'A') 
+g2 <- ggplot(data = fc %>% filter(year == 2010),
+             aes(x = p,
+                 y = malaria_reduction_relative)) +
+  geom_smooth(method='lm',formula=y~x) +
+  geom_point() +
+  cowplot::theme_cowplot() +
+  geom_text_repel(aes(label = iso3), size = 3) +
+  labs(x = '% GDP growth 2008-9',
+       y = 'Malaria reduction 2009-10',
+       title = 'B') 
+Rmisc::multiplot(g1, g2, cols = 1)
+dev.off()
+
+### ROBUSTNESS 3: malaria health spending
+x <- model_data %>%
+  dplyr::select(iso3, malaria_reduction_relative,
+                gdp_growth_relative,
+                gdp,
+                year,
+                population,
+                external_sources_of_spending_on_malaria) %>%
+  mutate(spending_pp = external_sources_of_spending_on_malaria / population) %>%
+  arrange(year) %>%
+  group_by(iso3) %>%
+  mutate(spending_pp_lag = dplyr::lag(spending_pp, 1)) %>%
+    ungroup %>%
+  mutate(spending_pp_lag_log = log(spending_pp_lag)) %>%
+  mutate(spending_pp_lag = spending_pp_lag * 100,
+         gdp_growth_relative = gdp_growth_relative * 100)
+    
+
+ggplot(data = x,
+       aes(x = spending_pp_lag,
+           y = gdp_growth_relative)) +
+  geom_point() +
+  geom_smooth(method='lm',formula=y~x) +
+  scale_x_log10()
+spending_fit <- lm(gdp_growth_relative ~ spending_pp_lag,
+                   data = x)
+summary(spending_fit)
 
 library(MASS)
 x <- vars::VAR(y = model_data %>%

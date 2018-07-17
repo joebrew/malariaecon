@@ -1,0 +1,50 @@
+This is BibTeX, Version 0.99d (TeX Live 2018/dev/Debian)
+Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
+The top-level auxiliary file: paper.aux
+The style file: pnas-new.bst
+Database file #1: pnas-sample.bib
+`title' is a missing field, not a string, for entry Guerra_2007
+while executing---line 971 of file pnas-new.bst
+Warning--empty title in Guerra_2007
+You've used 38 entries,
+            1837 wiz_defined-function locations,
+            746 strings with 10310 characters,
+and the built_in function-call counts, 7998 in all, are:
+= -- 642
+> -- 382
+< -- 3
++ -- 119
+- -- 81
+* -- 664
+:= -- 1203
+add.period$ -- 70
+call.type$ -- 38
+change.case$ -- 35
+chr.to.int$ -- 0
+cite$ -- 39
+duplicate$ -- 402
+empty$ -- 808
+format.name$ -- 81
+if$ -- 1752
+int.to.chr$ -- 0
+int.to.str$ -- 38
+missing$ -- 36
+newline$ -- 149
+num.names$ -- 38
+pop$ -- 82
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 213
+stack$ -- 0
+substring$ -- 535
+swap$ -- 102
+text.length$ -- 3
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 1
+while$ -- 76
+width$ -- 40
+write$ -- 365
+(There was 1 error message)
