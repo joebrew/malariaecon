@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2018/dev/Debian) (preloaded format=xelatex 2018.4.28)  17 JUL 2018 11:50
+This is XeTeX, Version 3.14159265-2.6-0.99998 (TeX Live 2018/dev/Debian) (preloaded format=xelatex 2018.4.28)  17 JUL 2018 11:55
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1364,6 +1364,8 @@ Package: gettitlestring 2016/05/16 v1.5 Cleanup title references (HO)
 LaTeX Info: Redefining \ref on input line 41.
 LaTeX Info: Redefining \pageref on input line 41.
 LaTeX Info: Redefining \nameref on input line 41.
+
+(./paper.out) (./paper.out)
 \@outlinefile=\write4
 \openout4 = `paper.out'.
 
@@ -1628,24 +1630,7 @@ File: ../figures/act.png Graphic file (type bmp)
 <../figures/act.png>
 File: ../figures/crisis.png Graphic file (type bmp)
 <../figures/crisis.png>
-
-
-Package natbib Warning: Citation `Chen_2013' on page 5 undefined on input line 
-145.
-
-
-Package natbib Warning: Citation `Erdil_2009' on page 5 undefined on input line
- 145.
-
-
-Package natbib Warning: Citation `Orem_2012' on page 5 undefined on input line 
-147.
-
-
-Package natbib Warning: Citation `Asafu_Adjaye_2004' on page 5 undefined on inp
-ut line 149.
-
-[5] (./paper.bbl
+ [5] (./paper.bbl
 LaTeX Font Info:    Font shape `T1/phv/m/it' in size <6> not available
 (Font)              Font shape `T1/phv/m/sl' tried instead on input line 6.
 LaTeX Font Info:    Font shape `T1/phv/m/sl' will be
@@ -1656,19 +1641,26 @@ Underfull \hbox (badness 1478) in paragraph at lines 24--26
 malaria.  \T1/phv/m/sl/6 Na-ture
  []
 
-
-Package lineno Warning: Linenumber reference failed, 
-(lineno)                rerun to get it right.
-
 Missing character: There is no – in font phvr8t!
 Missing character: There is no – in font phvr8t!
 Missing character: There is no – in font phvr8t!
 Missing character: There is no – in font phvr8t!
-)
+! Misplaced alignment tab character &.
+l.134 ...{\em The Journal of International Trade &
+                                                   Economic Development}
+I can't figure out why you would want to use a tab mark
+here. If you just want an ampersand, the remedy is
+simple: Just type `I\&' now. But if some right brace
+up above has ended a previous alignment prematurely,
+you're probably due for more error messages, and you
+might try typing `S' now just to see what is salvageable.
 
-Package natbib Warning: There were undefined citations.
-
-
+Missing character: There is no – in font phvr8t!
+Missing character: There is no – in font phvr8t!
+Missing character: There is no ‐ in font phvr8t!
+Missing character: There is no ‐ in font phvr8t!
+Missing character: There is no – in font phvr8t!
+) 
 AED: lastpage setting LastPage
 [6]
 Package atveryend Info: Empty hook `BeforeClearDocument' on input line 165.
@@ -1683,10 +1675,10 @@ LaTeX Warning: There were multiply-defined labels.
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 165.
  ) 
 Here is how much of TeX's memory you used:
- 35264 strings out of 493058
- 646100 string characters out of 6138353
- 741042 words of memory out of 5000000
- 38642 multiletter control sequences out of 15000+600000
+ 35282 strings out of 493058
+ 646400 string characters out of 6138353
+ 741137 words of memory out of 5000000
+ 38656 multiletter control sequences out of 15000+600000
  631891 words of font info for 92 fonts, out of 8000000 for 9000
  1326 hyphenation exceptions out of 8191
  62i,14n,73p,10395b,1041s stack positions out of 5000i,500n,10000p,200000b,80000s
